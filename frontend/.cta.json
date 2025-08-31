@@ -1,0 +1,23 @@
+{
+  "framework": "react",
+  "typescript": true,
+  "projectName": "frontend",
+  "mode": "file-router",
+  "tailwind": true,
+  "packageManager": "npm",
+  "toolchain": "biome",
+  "variableValues": {},
+  "git": true,
+  "version": 1,
+  "existingAddOns": [
+    "form",
+    "netlify",
+    "sentry",
+    "shadcn",
+    "start",
+    "t3env",
+    "tRPC",
+    "table",
+    "tanstack-query"
+  ]
+}
