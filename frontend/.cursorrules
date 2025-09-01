@@ -1,4 +1,5 @@
 We use Sentry for watching for errors in our deployed application, as well as for instrumentation of our application.
+We use Sentry for watching for errors in our deployed application, as well as for instrumentation of our application.
 
 ## Error collection
 
