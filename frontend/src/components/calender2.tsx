@@ -33,26 +33,66 @@ const FormSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email"),
   phone: z.string().min(1, "Phone number is required"),
-  date: z.date({ required_error: "A booking date is required." }),
+  // accept date strings from <input type="date"> by preprocessing into a Date
+  date: z.preprocess(
+    (arg) => {
+      if (typeof arg === "string" && arg.length) return new Date(arg);
+      if (arg instanceof Date) return arg;
+      return arg;
+    },
+    z.date({ required_error: "A booking date is required." })
+  ),
 });
 
 export default function BookingCalendar() {
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date());
 
-  const form = useForm<z.infer<typeof FormSchema>>({
+  const form = useForm<z.input<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
       name: "",
       email: "",
       phone: "",
+      date: new Date(),
     },
   });
 
-  function onSubmit(data: z.infer<typeof FormSchema>) {
-    toast({
-      title: "Booking Request Sent",
-      description: `Booking submitted for ${format(data.date, "PPP")}`,
-    });
+  // Replace with your WhatsApp number in international format without '+' (e.g. 255712345678)
+  const WHATSAPP_NUMBER = "255760303600";
+
+  function onSubmit(data: any) {
+    // normalize date (handle date string from inputs)
+    let dateStr = "";
+    try {
+      const dateObj = data.date instanceof Date ? data.date : new Date(data.date);
+      dateStr = isNaN(dateObj.getTime()) ? String(data.date ?? "") : format(dateObj, "PPP");
+    } catch {
+      dateStr = String(data.date ?? "");
+    }
+
+    const message = `Booking request%0A%0AName: ${encodeURIComponent(
+      String(data.name ?? "")
+    )}%0AEmail: ${encodeURIComponent(String(data.email ?? ""))}%0APhone: ${encodeURIComponent(
+      String(data.phone ?? "")
+    )}%0ADate: ${encodeURIComponent(dateStr)}`;
+
+    const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${message}`;
+    // open WhatsApp in a new tab/window
+    const win = window.open(waUrl, "_blank");
+
+    if (win) {
+      // success toast
+      toast({
+        title: "WhatsApp opened",
+        description: "Your booking message is ready. Please complete sending in WhatsApp.",
+      });
+    } else {
+      // popup blocked or failed
+      toast({
+        title: "Unable to open WhatsApp",
+        description: "Popup blocked. Copy this link and open it manually: " + waUrl,
+      });
+    }
   }
 
   return (
@@ -71,92 +111,59 @@ export default function BookingCalendar() {
             <CardTitle className="text-xl font-semibold text-center text-[#584910]">Booking Form</CardTitle>
           </CardHeader>
           <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-[#584910] text-center w-full">Name</FormLabel>
-                      <FormControl>
-                        <input
-                          {...field}
-                          className="input border p-2 w-full rounded-md text-center"
-                          placeholder="Your Name"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 text-left">
+              <div>
+                <label className="block text-sm font-medium">Name</label>
+                <input
+                  {...form.register("name")}
+                  className="mt-1 block w-full rounded-md border px-3 py-2"
+                  required
                 />
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-[#584910] text-center w-full">Phone number</FormLabel>
-                      <FormControl>
-                        <input
-                          {...field}
-                          className="input border p-2 w-full rounded-md text-center"
-                          placeholder="Your Phone Number"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-[#584910] text-center w-full">Booking Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-center text-center font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Select date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date < new Date()}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              <div>
+                <label className="block text-sm font-medium">Email</label>
+                <input
+                  {...form.register("email")}
+                  type="email"
+                  className="mt-1 block w-full rounded-md border px-3 py-2"
+                  required
                 />
-                <Button type="submit" className="w-full bg-[#584910] text-white">
-                  Submit Booking
-                </Button>
-              </form>
-            </Form>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Phone</label>
+                <input
+                  {...form.register("phone")}
+                  className="mt-1 block w-full rounded-md border px-3 py-2"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Date</label>
+                <input
+                  {...form.register("date")}
+                  type="date"
+                  className="mt-1 block w-full rounded-md border px-3 py-2 bg-white text-black"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-center">
+                <button
+                  type="submit"
+                  className="inline-flex items-center rounded bg-[#584910] px-4 py-2 text-white"
+                >
+                  Send to WhatsApp
+                </button>
+              </div>
+            </form>
           </CardContent>
         </Card>
 
         {/* Calendar Card */}
-        <BookedCalendar />
+        {/* <BookedCalendar /> */}
       </div>
     </div>
   );
